@@ -14,12 +14,26 @@
         curl_close($resource);
         return substr(explode("\n\r", $file, 2)[1], 1);
     }
+    function FormatFunction($functionstr){
+        $functionstr = str_replace("<>", "\\ne", $functionstr);
+        $functionstr = str_replace("ca", "\approx", $functionstr);
+        $functionstr = str_replace("<=", "\le", $functionstr);
+        $functionstr = str_replace(">=", "\ge", $functionstr);
+        $functionstr = str_replace("pi", "\pi", $functionstr);
+        $functionstr = str_replace("+-", "\pm", $functionstr);
+        $matches = array();
+        preg_match_all("/(\(([0-9]*)\/([0-9]*)\))/", $functionstr, $matches, PREG_OFFSET_CAPTURE); // https://regex101.com/        
+        for($i = 0; $i < count($matches[0]); $i++){
+            $functionstr = str_replace($matches[0][$i][0], "\\frac{".$matches[2][$i][0]."}{".$matches[3][$i][0]."}", $functionstr);
+        }
+        return $functionstr;
+    }
     function CheckFunctionInput($functionstr, &$data){
         $resource = curl_init();
         curl_setopt($resource, CURLOPT_URL, "https://wikimedia.org/api/rest_v1/media/math/check/tex");
         curl_setopt($resource, CURLOPT_HEADER, 1);
         curl_setopt($resource, CURLOPT_POST, 1);
-        curl_setopt($resource, CURLOPT_POSTFIELDS, "q=".$functionstr);
+        curl_setopt($resource, CURLOPT_POSTFIELDS, "q=".urlencode(FormatFunction($functionstr)));
         curl_setopt($resource, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($resource, CURLOPT_BINARYTRANSFER, 1);
         $resp = curl_exec($resource);
@@ -33,7 +47,7 @@
             }
         }
         $json = json_decode(substr($file_array[1], 1));
-        if($json->success == "true"){            
+        if(isset($json->success) && $json->success == "true"){            
             $data = $headers['x-resource-location'];
             return true;
         }else{
