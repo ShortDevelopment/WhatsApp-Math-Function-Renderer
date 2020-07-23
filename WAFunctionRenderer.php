@@ -176,6 +176,8 @@
             border-bottom-color:#FFC107;
             border-right-color:#FFC107;
             text-align:left;
+            resize:vertical;
+            height:300px;
         }
         form input[type=submit]{
             border:3px solid #FF5722;
