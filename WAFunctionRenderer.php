@@ -14,7 +14,7 @@
         curl_close($resource);
         return substr(explode("\n\r", $file, 2)[1], 1);
     }
-    function FormatFunction($functionstr){
+    function FormatFunction($functionstr, $IgnoreBrackets = false){
         $functionstr = str_replace("<>", "\\ne", $functionstr);
         $functionstr = str_replace("ca", "\approx", $functionstr);
         $functionstr = str_replace("<=", "\le", $functionstr);
@@ -22,12 +22,15 @@
         $functionstr = str_replace("pi", "\pi", $functionstr);
         $functionstr = str_replace("+-", "\pm", $functionstr);
         $matches = array();
-        preg_match_all("/(\(([0-9]*)\/([0-9]*)\))/", $functionstr, $matches, PREG_OFFSET_CAPTURE); // https://regex101.com/        
+        preg_match_all("/(\(([^()]*?)\)\/\(([^()]*?)\))/", $functionstr, $matches, PREG_OFFSET_CAPTURE); // https://regex101.com/        
         for($i = 0; $i < count($matches[0]); $i++){
             $functionstr = str_replace($matches[0][$i][0], "\\frac{".$matches[2][$i][0]."}{".$matches[3][$i][0]."}", $functionstr);
+            $functionstr = FormatFunction(FormatFunction(FormatFunction($functionstr, true), true), true);
         }
-        $functionstr = str_replace("(", "{(", $functionstr);
-        $functionstr = str_replace(")", ")}", $functionstr);
+        if(!$IgnoreBrackets){
+            $functionstr = str_replace("(", "{(", $functionstr);
+            $functionstr = str_replace(")", ")}", $functionstr);
+        }
         return $functionstr;
     }
     function CheckFunctionInput($functionstr, &$data){
@@ -63,7 +66,7 @@
         echo DownloadData("https://wikimedia.org/api/rest_v1/media/math/render/png/".$_GET['d']);
         exit;
     }
-    if(isset($_GET['f'])){
+    if(isset($_GET['f']) && !isset($_GET['edit'])){
         $data = null;
         $functions = explode("\r\n", $_GET['f']);
         //$function = preg_replace("", "");        
@@ -123,6 +126,25 @@
             transform:translate(0px, -50%);
             border-radius:50%;
         }
+
+        #edit{
+            width:40px;
+            height:40px;
+            border:none;
+            outline:none !important;
+            background:none;
+            background-image:url('data/media/baseline_create_white_48dp.png');
+            background-position:center;
+            background-size:contain;
+            background-repeat:no-repeat;
+            cursor:pointer;
+            position:absolute;
+            top:50%;
+            right:15px;
+            transform:translate(0px, -50%);
+            display:block;
+        }
+
         a{
             text-decoration:none;
             cursor:pointer;
@@ -248,6 +270,11 @@
                 c0.5,0,1.1-0.2,1.5-0.4c0.3-0.2,0.5-0.2,0.7-0.4l0.2-0.2c0.2-0.2,0.4-0.3,0.6-0.5c0.2-0.2,0.4-0.4,0.5-0.6c0.2-0.4,0.3-0.9,0.4-1.4
                 c0-0.2,0-0.5,0-0.7C28.6,23.7,28.5,23.6,28.3,23.5z"/>    
         </svg>
+        <?php 
+        if(isset($_GET['f']) && !isset($_GET['edit'])){
+        ?>
+        <a id="edit" target="_self" href="<?php echo "?edit&f=".urlencode($_GET['f']); ?>" title="Bearbeiten"></a>
+        <?php } ?>
     </header>
     <content>
         <?php if(count($urlsvg) != 0){ ?>
@@ -265,7 +292,7 @@
         </form>
         <?php }else{ ?>        
         <form method="get" target="_self">
-            <textarea type="text" name="f" placholder="x^2" autocomplete="off" ></textarea>
+            <textarea type="text" name="f" placholder="x^2" autocomplete="off" ><?php if(isset($_GET['f'])){ echo $_GET['f']; } ?></textarea>
             <input type="submit" />
             <a href="https://en.wikipedia.org/wiki/Help:Displaying_a_formula">Formatierungshilfe</a>
         </form>
